@@ -70,7 +70,40 @@ app.delete('/api/tasks/:id', (req, res) => {
       res.status(204).send();
     });
   });
-});   
+});
+
+// Endpoint pour modifier une tâche
+app.put('/api/tasks/:id', (req, res) => {
+  const taskId = parseInt(req.params.id, 10);
+  const { title, description, deadline } = req.body;
+
+  if (isNaN(taskId)) {
+    return res.status(400).json({ error: 'ID invalide' });
+  }
+
+  fs.readFile(DATA_FILE, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: 'Erreur lors de la lecture des tâches' });
+    }
+
+    let tasks = JSON.parse(data);
+    const taskIndex = tasks.findIndex(task => task.id === taskId);
+
+    if (taskIndex === -1) {
+      return res.status(404).json({ error: 'Tâche non trouvée' });
+    }
+
+    // Mise à jour des champs
+    tasks[taskIndex] = { ...tasks[taskIndex], title, description, deadline };
+
+    fs.writeFile(DATA_FILE, JSON.stringify(tasks, null, 2), (err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Erreur lors de l\'écriture des tâches' });
+      }
+      res.status(200).json(tasks[taskIndex]);
+    });
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);

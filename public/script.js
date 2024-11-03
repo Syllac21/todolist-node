@@ -1,7 +1,7 @@
 // variable
 const day = new Date();
 let currantDay = day.toLocaleDateString();
-
+let alltasks = [];
 
 // Charger les tâches depuis le serveur et les afficher
 function loadTasks() {
@@ -19,17 +19,23 @@ function loadTasks() {
         const taskItem = document.createElement("div");
         let classAlert ='';
         let classDDay = '';
-        delta > 0 ? classAlert = 'bg-red-400': '';
-        delta === 0 ? classDDay = '2xl font-bold' : classDDay = 'xl font-semibold';
-        taskItem.className = `p-4 rounded shadow ${classAlert}`;
+        classAlert = delta > 0 ? 'bg-indigo-400': 'bg-teal-400';
+        classDDay = delta === 0 ? '2xl font-bold' : 'xl font-semibold';
+        taskItem.className = `p-4 rounded shadow-xl ${classAlert}`;
         taskItem.innerHTML = `
           <h2 class="text-${classDDay}">${task.title}</h2>
           <div>${task.description}</div>
           <div>${task.deadline}</div>
-          <button onclick="deleteTask(${Number(task.id)})" class="text-red-500 mt-2 hover:underline">Supprimer</button>`;
+          <button onclick="deleteTask(${Number(task.id)})" class="text-red-500 mt-2 hover:underline">Supprimer</button>
+          
+          <button onclick="openEditForm(${task.id})">Modifier</button>
+          `;
         taskList.appendChild(taskItem);
+        alltasks = tasks
+        
       });
 
+      
         const inputDate = document.getElementById('filterDate');
         inputDate.value = ""
         const changeDate =  inputDate.addEventListener('change' , ()=>{
@@ -125,6 +131,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+/**
+ * La fonction renvoie un nombre négatif si date1<date2 et positif sir date1>date2
+ * @param {date au format jj/mm/aaaa} date1 
+ * @param {date au format jj/mm/aaaa} date2 
+ * @returns 
+ */
 function compareDate(date1,date2){
   
   const [day1, month1, year1] = date1.split('/').map(Number);
@@ -134,3 +146,55 @@ function compareDate(date1,date2){
   year1 !== year2 ? compare = year1 - year2 : month1 !== month2 ? compare = month1 - month2 : compare = day1 - day2;
   return compare;
 }
+
+// modification des taches
+let currentEditId = null;
+
+
+
+function openEditForm(id) {
+  
+  const task = alltasks.find(t => t.id === id); // Trouve la tâche par ID
+  if (!task) {
+    return;
+
+  } 
+  console.log('task' , task);
+  document.getElementById("editForm").style.display = "block";
+  document.getElementById("editTitle").value = task.title;
+  document.getElementById("editDescription").value = task.description;
+  document.getElementById("editDeadline").value = task.deadline.split('/').reverse().join('-'); // Format pour input date
+  
+  currentEditId = task.id;
+}
+window.openEditForm = openEditForm;
+
+function closeEditForm() {
+  document.getElementById("editForm").style.display = "none";
+  currentEditId = null;
+}
+window.closeEditForm = closeEditForm;
+
+function submitEdit() {
+  const updatedTask = {
+    title: document.getElementById("editTitle").value,
+    description: document.getElementById("editDescription").value,
+    deadline: document.getElementById("editDeadline").value.split('-').reverse().join('/') // Format dd/mm/yyyy
+  };
+
+  fetch(`/api/tasks/${currentEditId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updatedTask),
+  })
+  .then(response => response.json())
+  .then(() => {
+    closeEditForm();
+    loadTasks(); // Rafraîchir la liste des tâches
+  })
+  .catch(error => console.error('Erreur lors de la mise à jour de la tâche:', error));
+}
+
+window.submitEdit = submitEdit;
